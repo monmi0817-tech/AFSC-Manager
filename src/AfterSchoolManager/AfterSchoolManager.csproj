@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>AfterSchoolManager</AssemblyName>
+    <RootNamespace>AfterSchoolManager</RootNamespace>
+    <Version>0.5.6</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Data\schema.sql" />
+    <EmbeddedResource Include="Data\schema.sql" LogicalName="AfterSchoolManager.Data.schema.sql" />
+  </ItemGroup>
+</Project>
