@@ -301,6 +301,31 @@ public sealed class DatabaseService
         transaction.Commit();
     }
 
+    public void UpdateEligibility(long academicYearId,long id,string programCode,DateTime effectiveFrom)
+    {
+        using var connection=Open();using var transaction=connection.BeginTransaction();
+        long programId;
+        using(var program=connection.CreateCommand())
+        {
+            program.Transaction=transaction;program.CommandText="SELECT id FROM support_program WHERE code=$code AND is_active=1;";
+            program.Parameters.AddWithValue("$code",programCode);programId=Convert.ToInt64(program.ExecuteScalar()??throw new InvalidOperationException("지원 제도를 찾지 못했습니다."));
+        }
+        using(var command=connection.CreateCommand())
+        {
+            command.Transaction=transaction;command.CommandText="""
+                UPDATE support_eligibility
+                SET program_id=$program,effective_from=$from,effective_to=NULL,updated_at=CURRENT_TIMESTAMP
+                WHERE id=$id AND student_id IN (SELECT id FROM student WHERE academic_year_id=$year);
+                """;
+            command.Parameters.AddWithValue("$program",programId);command.Parameters.AddWithValue("$from",effectiveFrom.ToString("yyyy-MM-dd"));
+            command.Parameters.AddWithValue("$id",id);command.Parameters.AddWithValue("$year",academicYearId);
+            if(command.ExecuteNonQuery()!=1)throw new InvalidOperationException("수정할 지원 대상자를 찾지 못했습니다.");
+        }
+        IncrementYearRevision(connection,transaction,academicYearId);
+        AddYearHistory(connection,transaction,academicYearId,"SUPPORT_ELIGIBILITY",id,"UPDATE","eligibility",null,$"{programCode}/{effectiveFrom:yyyy-MM-dd}","지원 대상자 수정");
+        transaction.Commit();
+    }
+
     public void DeleteAllEligibilities(long academicYearId)
     {
         using var connection=Open();using var transaction=connection.BeginTransaction();

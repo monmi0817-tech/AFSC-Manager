@@ -62,7 +62,7 @@ public sealed class ExcelService
         header.Style.Fill.BackgroundColor = XLColor.FromHtml("#DCE8F8");
         header.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
         ws.SheetView.FreezeRows(1);
-        ws.Columns().AdjustToContents();
+        for (var column = 1; column <= headers.Length; column++) ws.Column(column).Width = 10;
         wb.SaveAs(path);
     }
 

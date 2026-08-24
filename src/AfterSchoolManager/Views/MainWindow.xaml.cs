@@ -37,7 +37,7 @@ public partial class MainWindow : Window
         _excel = new ExcelService(_db);
         InitializeComponent();
         ConfigureDataGridAlignment();
-        _settings=_settingsService.Load();BackupDirectoryBox.Text=_settings.BackupDirectory;GitHubRepositoryBox.Text=_settings.GitHubRepository;
+        _settings=_settingsService.Load();BackupDirectoryBox.Text=_settings.BackupDirectory;
         AppVersionText.Text=$"버전 {GetAppVersion()}";DataLocationText.Text=AppPaths.DatabasePath;
         _studentSearchTimer.Tick+=(_,_)=>{_studentSearchTimer.Stop();if(_ready&&Current is not null)StudentsGrid.ItemsSource=_db.GetStudents(Current.AcademicYearId,StudentSearchBox.Text);};
         _enrollmentSearchTimer.Tick+=(_,_)=>{_enrollmentSearchTimer.Stop();if(_ready&&Current is not null)EnrollmentGrid.ItemsSource=_db.GetEnrollments(Current.Id,EnrollmentSearchBox.Text);};
@@ -273,15 +273,17 @@ public partial class MainWindow : Window
     private void AddStudent_Click(object sender, RoutedEventArgs e)
     {
         if (!EnsureWorkspace()) return;
-        TryRun(() => _db.AddStudent(Current!.AcademicYearId, Int(StudentGradeBox, "학년"), StudentClassBox.Text,
-            Int(StudentNumberBox, "번호"), StudentNameBox.Text, StudentNoteBox.Text), "학생을 추가했습니다.");
+        var dialog=new RecordEditorDialog(RecordEditorMode.Student,"학생정보 추가",_studentChoices){Owner=this};
+        if(dialog.ShowDialog()!=true)return;
+        TryRun(() => _db.AddStudent(Current!.AcademicYearId,dialog.Grade,dialog.ClassName,dialog.StudentNumber,dialog.StudentName,dialog.Note),"학생을 추가했습니다.");
     }
 
     private void UpdateStudent_Click(object sender, RoutedEventArgs e)
     {
         if (Current is null || StudentsGrid.SelectedItem is not StudentItem item) { MessageBox.Show("수정할 학생을 선택하세요."); return; }
-        TryRun(() => _db.UpdateStudent(item.Id, Current.AcademicYearId, Int(StudentGradeBox, "학년"), StudentClassBox.Text,
-            Int(StudentNumberBox, "번호"), StudentNameBox.Text, StudentNoteBox.Text), "학생정보를 수정했습니다.");
+        var dialog=new RecordEditorDialog(RecordEditorMode.Student,"학생정보 수정",_studentChoices,existing:item){Owner=this};
+        if(dialog.ShowDialog()!=true)return;
+        TryRun(() => _db.UpdateStudent(item.Id,Current.AcademicYearId,dialog.Grade,dialog.ClassName,dialog.StudentNumber,dialog.StudentName,dialog.Note),"학생정보를 수정했습니다.");
     }
 
     private void DeleteStudent_Click(object sender, RoutedEventArgs e)
@@ -315,12 +317,17 @@ public partial class MainWindow : Window
     private void AddEligibility_Click(object sender, RoutedEventArgs e)
     {
         if (Current is null) return;
-        TryRun(() =>
-        {
-            var student=_db.FindStudent(Current.AcademicYearId,Int(SupportGradeBox,"학년"),SupportClassBox.Text,Int(SupportNumberBox,"번호"),SupportNameBox.Text);
-            var code=(SupportProgramCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString()??throw new InvalidOperationException("지원제도를 선택하세요.");
-            _db.AddEligibility(Current.AcademicYearId,student.Id,code,SupportStartPicker.SelectedDate??Current.StartDate);
-        },"지원 대상자를 추가했습니다.");
+        var dialog=new RecordEditorDialog(RecordEditorMode.Eligibility,"지원 대상자 추가",_studentChoices,defaultDate:Current.StartDate){Owner=this};
+        if(dialog.ShowDialog()!=true)return;
+        TryRun(()=>_db.AddEligibility(Current.AcademicYearId,dialog.SelectedStudent!.Id,dialog.ProgramCode,dialog.EffectiveFrom),"지원 대상자를 추가했습니다.");
+    }
+
+    private void UpdateEligibility_Click(object sender,RoutedEventArgs e)
+    {
+        if(Current is null||EligibilityGrid.SelectedItem is not EligibilityItem item){MessageBox.Show("수정할 지원 대상자를 선택하세요.");return;}
+        var dialog=new RecordEditorDialog(RecordEditorMode.Eligibility,"지원 대상자 수정",_studentChoices,existing:item){Owner=this};
+        if(dialog.ShowDialog()!=true)return;
+        TryRun(()=>_db.UpdateEligibility(Current.AcademicYearId,item.Id,dialog.ProgramCode,dialog.EffectiveFrom),"지원 대상자 정보를 수정했습니다. 기존 정산은 다시 생성해야 합니다.");
     }
 
     private void DeleteEligibility_Click(object sender, RoutedEventArgs e)
@@ -340,17 +347,25 @@ public partial class MainWindow : Window
         SupportStartPicker.SelectedDate=Current?.StartDate;
     }
 
-    private void AddDepartment_Click(object sender, RoutedEventArgs e) => SaveDepartment(null,"부서를 추가했습니다.");
+    private void AddDepartment_Click(object sender, RoutedEventArgs e)
+    {
+        if(Current is null)return;
+        var dialog=new RecordEditorDialog(RecordEditorMode.Department,"부서정보 추가",_studentChoices){Owner=this};
+        if(dialog.ShowDialog()!=true)return;
+        SaveDepartment(dialog,null,"부서를 추가했습니다.");
+    }
     private void UpdateDepartment_Click(object sender, RoutedEventArgs e)
     {
         if (DepartmentGrid.SelectedItem is not DepartmentItem item) { MessageBox.Show("수정할 부서를 선택하세요.");return; }
-        SaveDepartment(item.Id,"부서정보를 수정했습니다. 수강생 명단에도 적용하려면 [부서금액 다시 불러오기]를 실행하세요.");
+        var dialog=new RecordEditorDialog(RecordEditorMode.Department,"부서정보 수정",_studentChoices,existing:item){Owner=this};
+        if(dialog.ShowDialog()!=true)return;
+        SaveDepartment(dialog,item.Id,"부서정보를 수정했습니다. 수강생 명단에도 적용하려면 [부서금액 다시 불러오기]를 실행하세요.");
     }
-    private void SaveDepartment(long? id,string message)
+    private void SaveDepartment(RecordEditorDialog dialog,long? id,string message)
     {
         if (Current is null)return;
-        TryRun(()=>_db.SaveDepartment(id,Current.AcademicYearId,DeptNameBox.Text,DeptSectionBox.Text,DeptWeekdaysBox.Text,DeptInstructorBox.Text,
-            Money(DeptInstructorFeeBox,"강사료"),Money(DeptOperatingFeeBox,"수용비"),Money(DeptTextbookFeeBox,"교재비"),Money(DeptMaterialFeeBox,"재료비")),message);
+        TryRun(()=>_db.SaveDepartment(id,Current.AcademicYearId,dialog.DepartmentName,dialog.SectionName,dialog.Weekdays,dialog.InstructorName,
+            dialog.InstructorFee,dialog.OperatingFee,dialog.TextbookFee,dialog.MaterialFee),message);
     }
     private void DeleteDepartment_Click(object sender, RoutedEventArgs e)
     {
@@ -378,12 +393,9 @@ public partial class MainWindow : Window
     private void AddEnrollment_Click(object sender,RoutedEventArgs e)
     {
         if(Current is null)return;
-        TryRun(()=>
-        {
-            var student=_db.FindStudent(Current.AcademicYearId,Int(EnrollGradeBox,"학년"),EnrollClassBox.Text,Int(EnrollNumberBox,"번호"),EnrollNameBox.Text);
-            var dept=EnrollDepartmentCombo.SelectedItem as DepartmentItem??throw new InvalidOperationException("부서를 선택하세요.");
-            _db.AddEnrollment(Current.Id,student.Id,dept.Id);
-        },"수강 데이터를 추가했습니다.");
+        var dialog=new RecordEditorDialog(RecordEditorMode.EnrollmentAdd,"수강 데이터 추가",_studentChoices,_db.GetDepartments(Current.AcademicYearId)){Owner=this};
+        if(dialog.ShowDialog()!=true)return;
+        TryRun(()=>_db.AddEnrollment(Current.Id,dialog.SelectedStudent!.Id,dialog.SelectedDepartment!.Id),"수강 데이터를 추가했습니다.");
     }
     private void DeleteEnrollment_Click(object sender,RoutedEventArgs e)
     {
@@ -408,13 +420,17 @@ public partial class MainWindow : Window
     private void UpdateEnrollmentAmounts_Click(object sender,RoutedEventArgs e)
     {
         if(Current is null||EnrollmentGrid.SelectedItem is not EnrollmentItem item){MessageBox.Show("금액을 변경할 수강 데이터를 선택하세요.");return;}
-        TryRun(()=>_db.UpdateEnrollmentAmounts(Current.Id,item.Id,Money(ActualInstructorBox,"실제 강사료"),Money(ActualOperatingBox,"실제 수용비"),Money(ActualTextbookBox,"실제 교재비"),Money(ActualMaterialBox,"실제 재료비"),EnrollmentChangeReasonBox.Text),"실제 적용금액을 변경했습니다. 기존 정산은 다시 생성해야 합니다.");
+        var dialog=new RecordEditorDialog(RecordEditorMode.EnrollmentEdit,"수강 데이터 수정",_studentChoices,_db.GetDepartments(Current.AcademicYearId),item){Owner=this};
+        if(dialog.ShowDialog()!=true)return;
+        TryRun(()=>_db.UpdateEnrollmentAmounts(Current.Id,item.Id,dialog.InstructorFee,dialog.OperatingFee,dialog.TextbookFee,dialog.MaterialFee,dialog.ChangeReason),"실제 적용금액을 변경했습니다. 기존 정산은 다시 생성해야 합니다.");
     }
     private void CancelEnrollment_Click(object sender,RoutedEventArgs e)
     {
         if(Current is null||EnrollmentGrid.SelectedItem is not EnrollmentItem item){MessageBox.Show("취소할 수강 데이터를 선택하세요.");return;}
+        var dialog=new RecordEditorDialog(RecordEditorMode.EnrollmentEdit,"수강취소 사유 입력",_studentChoices,_db.GetDepartments(Current.AcademicYearId),item){Owner=this};
+        if(dialog.ShowDialog()!=true)return;
         if(!Confirm($"{item.StudentName} / {item.DepartmentName} 수강을 취소 처리할까요?\n행은 삭제되지 않고 취소 이력으로 보존됩니다."))return;
-        TryRun(()=>_db.CancelEnrollment(Current.Id,item.Id,DateTime.Today,EnrollmentChangeReasonBox.Text),"수강취소 상태로 변경했습니다. 기존 정산은 다시 생성해야 합니다.");
+        TryRun(()=>_db.CancelEnrollment(Current.Id,item.Id,DateTime.Today,dialog.ChangeReason),"수강취소 상태로 변경했습니다. 기존 정산은 다시 생성해야 합니다.");
     }
     private void DeleteAllEnrollments_Click(object sender,RoutedEventArgs e)
     {
@@ -437,7 +453,16 @@ public partial class MainWindow : Window
         if(Current is null)return;
         try
         {
-            var detail=_db.GetStudentDetail(Current.AcademicYearId,Int(DetailGradeBox,"학년"),DetailClassBox.Text,Int(DetailNumberBox,"번호"),DetailNameBox.Text);
+            var grade=OptionalInt(DetailGradeBox.Text,"학년");var number=OptionalInt(DetailNumberBox.Text,"번호");
+            var className=DetailClassBox.Text.Trim();var name=DetailNameBox.Text.Trim();
+            if(grade is null&&number is null&&className.Length==0&&name.Length==0)throw new ArgumentException("학년, 반, 번호, 이름 중 하나 이상을 입력하세요.");
+            var matches=_studentChoices.Where(x=>(grade is null||x.Grade==grade)&&(number is null||x.StudentNumber==number)
+                &&(className.Length==0||x.ClassName.Equals(className,StringComparison.OrdinalIgnoreCase))
+                &&(name.Length==0||x.Name.Contains(name,StringComparison.OrdinalIgnoreCase))).ToArray();
+            if(matches.Length==0)throw new InvalidOperationException("입력한 조건과 일치하는 학생이 없습니다.");
+            if(matches.Length>1)throw new InvalidOperationException($"{matches.Length}명의 학생이 검색되었습니다. 학생을 한 명으로 구분할 조건을 더 입력하세요.");
+            var student=matches[0];FillStudentSelector("Detail",student);
+            var detail=_db.GetStudentDetail(Current.AcademicYearId,student.Grade,student.ClassName,student.StudentNumber,student.Name);
             var s=detail.Summary;DetailStudentText.Text=$"{s.StudentName} · {s.Grade}학년 {s.ClassName}반 {s.StudentNumber}번\n{s.SupportType}";
             DetailVoucherText.Text=$"한도 {s.VoucherBudget:N0}원\n사용 {s.VoucherUsed:N0}원 · 잔액 {s.VoucherBalance:N0}원";
             DetailFreeText.Text=$"한도 {s.FreeBudget:N0}원\n사용 {s.FreeUsed:N0}원 · 잔액 {s.FreeBalance:N0}원";
@@ -483,6 +508,7 @@ public partial class MainWindow : Window
                 case "Number": boxes.Number.Text=selected;boxes.Name.Text="";break;
                 case "Name": boxes.Name.Text=selected;break;
             }
+            if(group=="Detail"&&field is "Grade" or "Class" or "Name")return;
             var matches=FilterStudents(boxes,field=="Name");
             if(matches.Count==1)
             {
@@ -505,16 +531,30 @@ public partial class MainWindow : Window
             "Grade"=>boxes.Grade.Text,"Class"=>boxes.Class.Text,"Number"=>boxes.Number.Text,_=>boxes.Name.Text
         };
         IEnumerable<StudentItem> rows=_studentChoices;
-        if((field is "Class" or "Number" or "Name") && int.TryParse(boxes.Grade.Text,out var grade))rows=rows.Where(x=>x.Grade==grade);
-        if((field is "Number" or "Name") && !string.IsNullOrWhiteSpace(boxes.Class.Text))rows=rows.Where(x=>x.ClassName==boxes.Class.Text.Trim());
-        if(field=="Name" && int.TryParse(boxes.Number.Text,out var number))rows=rows.Where(x=>x.StudentNumber==number);
-        var values=field switch
+        var detailNeedsStudentScope=group=="Detail"&&field is "Number" or "Name";
+        var detailScopeReady=int.TryParse(boxes.Grade.Text,out var detailGrade)&&!string.IsNullOrWhiteSpace(boxes.Class.Text);
+        string[] values;
+        if(detailNeedsStudentScope&&!detailScopeReady)
         {
-            "Grade"=>rows.Select(x=>x.Grade.ToString()).Distinct().OrderBy(x=>int.Parse(x)).ToArray(),
-            "Class"=>rows.Select(x=>x.ClassName).Distinct().OrderBy(x=>x).ToArray(),
-            "Number"=>rows.Select(x=>x.StudentNumber.ToString()).Distinct().OrderBy(x=>int.Parse(x)).ToArray(),
-            _=>rows.Select(x=>x.Name).Distinct().OrderBy(x=>x).ToArray()
-        };
+            values=Array.Empty<string>();
+        }
+        else
+        {
+            if(group=="Detail")
+            {
+                if(detailNeedsStudentScope)rows=rows.Where(x=>x.Grade==detailGrade&&x.ClassName==boxes.Class.Text.Trim());
+            }
+            else if((field is "Class" or "Number" or "Name")&&int.TryParse(boxes.Grade.Text,out var grade))rows=rows.Where(x=>x.Grade==grade);
+            if(group!="Detail"&&(field is "Number" or "Name")&&!string.IsNullOrWhiteSpace(boxes.Class.Text))rows=rows.Where(x=>x.ClassName==boxes.Class.Text.Trim());
+            if(field=="Name"&&int.TryParse(boxes.Number.Text,out var number))rows=rows.Where(x=>x.StudentNumber==number);
+            values=field switch
+            {
+                "Grade"=>rows.Select(x=>x.Grade.ToString()).Distinct().OrderBy(x=>int.Parse(x)).ToArray(),
+                "Class"=>rows.Select(x=>x.ClassName).Distinct().OrderBy(x=>x).ToArray(),
+                "Number"=>rows.Select(x=>x.StudentNumber.ToString()).Distinct().OrderBy(x=>int.Parse(x)).ToArray(),
+                _=>rows.Select(x=>x.Name).Distinct().OrderBy(x=>x).ToArray()
+            };
+        }
         var target=field switch{"Grade"=>boxes.Grade,"Class"=>boxes.Class,"Number"=>boxes.Number,_=>boxes.Name};
         _syncingStudentSelectors=true;try{target.ItemsSource=values;target.Text=current;}finally{_syncingStudentSelectors=false;}
     }
@@ -556,7 +596,7 @@ public partial class MainWindow : Window
 
     private void SaveMaintenanceSettings_Click(object sender,RoutedEventArgs e)
     {
-        try{_settings.BackupDirectory=BackupDirectoryBox.Text.Trim();_settings.GitHubRepository=GitHubRepositoryBox.Text.Trim();_settingsService.Save(_settings);MessageBox.Show("백업 폴더와 업데이트 저장소 설정을 저장했습니다.","완료",MessageBoxButton.OK,MessageBoxImage.Information);}
+        try{_settings.BackupDirectory=BackupDirectoryBox.Text.Trim();_settingsService.Save(_settings);MessageBox.Show("백업 폴더 설정을 저장했습니다.","완료",MessageBoxButton.OK,MessageBoxImage.Information);}
         catch(Exception ex){ShowError(ex);}
     }
 
@@ -570,7 +610,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            _settings.BackupDirectory=BackupDirectoryBox.Text.Trim();_settings.GitHubRepository=GitHubRepositoryBox.Text.Trim();_settingsService.Save(_settings);Directory.CreateDirectory(_settings.BackupDirectory);
+            _settings.BackupDirectory=BackupDirectoryBox.Text.Trim();_settingsService.Save(_settings);Directory.CreateDirectory(_settings.BackupDirectory);
             var path=Path.Combine(_settings.BackupDirectory,$"방과후통합관리_전체백업_{DateTime.Now:yyyyMMdd_HHmmss}.afbackup");_backup.CreateBackup(path);
             BackupStatusText.Text=$"마지막 백업: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n{path}";MessageBox.Show($"업무 데이터 전체를 백업했습니다.\n\n{path}","백업 완료",MessageBoxButton.OK,MessageBoxImage.Information);
         }
@@ -607,11 +647,11 @@ public partial class MainWindow : Window
         CheckUpdateButton.IsEnabled=false;UpdateStatusText.Text="최신 Release를 확인하고 있습니다...";DownloadUpdateButton.IsEnabled=false;
         try
         {
-            _settings.GitHubRepository=GitHubRepositoryBox.Text.Trim();_settings.BackupDirectory=BackupDirectoryBox.Text.Trim();_settingsService.Save(_settings);
-            _availableUpdate=await _updates.CheckAsync(_settings.GitHubRepository);UpdateStatusText.Text=_availableUpdate.IsUpdateAvailable
+            _settings.BackupDirectory=BackupDirectoryBox.Text.Trim();_settingsService.Save(_settings);
+            _availableUpdate=await _updates.CheckAsync();UpdateStatusText.Text=_availableUpdate.IsUpdateAvailable
                 ? $"새 버전 {_availableUpdate.LatestVersion}을 사용할 수 있습니다. (현재 { _availableUpdate.CurrentVersion})"
                 : $"현재 최신 버전입니다. ({_availableUpdate.CurrentVersion})";
-            DownloadUpdateButton.IsEnabled=_availableUpdate.IsUpdateAvailable&&_availableUpdate.InstallerUrl is not null;OpenReleaseButton.IsEnabled=true;
+            DownloadUpdateButton.IsEnabled=_availableUpdate.InstallerUrl is not null;OpenReleaseButton.IsEnabled=true;
         }
         catch(Exception ex){UpdateStatusText.Text=ex.Message;ShowError(ex);}
         finally{CheckUpdateButton.IsEnabled=true;}
@@ -631,9 +671,15 @@ public partial class MainWindow : Window
     }
 
     private void OpenRelease_Click(object sender,RoutedEventArgs e)
-    {try{if(_availableUpdate is null)throw new InvalidOperationException("먼저 업데이트 확인을 실행하세요.");Process.Start(new ProcessStartInfo(_availableUpdate.ReleasePageUrl){UseShellExecute=true});}catch(Exception ex){ShowError(ex);}}
+    {try{Process.Start(new ProcessStartInfo(UpdateService.ReleasesPageUrl){UseShellExecute=true});}catch(Exception ex){ShowError(ex);}}
 
     private static string GetAppVersion(){var v=Assembly.GetExecutingAssembly().GetName().Version??new Version(0,0,0);return $"{v.Major}.{v.Minor}.{Math.Max(0,v.Build)}";}
+
+    private static int? OptionalInt(string value,string field)
+    {
+        if(string.IsNullOrWhiteSpace(value))return null;
+        return int.TryParse(value.Trim(),out var number)?number:throw new ArgumentException($"{field}은(는) 숫자로 입력하세요.");
+    }
 
     private void StudentTemplate_Click(object sender,RoutedEventArgs e)=>SaveTemplate("학생명단_업로드양식.xlsx",_excel.CreateStudentTemplate);
     private void EligibilityTemplate_Click(object sender,RoutedEventArgs e)=>SaveTemplate("지원대상자_업로드양식.xlsx",_excel.CreateEligibilityTemplate);

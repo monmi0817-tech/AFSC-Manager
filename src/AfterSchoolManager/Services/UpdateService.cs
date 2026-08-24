@@ -10,11 +10,13 @@ namespace AfterSchoolManager.Services;
 
 public sealed class UpdateService
 {
+    public const string Repository = "monmi0817-tech/AFSC-Manager";
+    public const string ReleasesPageUrl = "https://github.com/monmi0817-tech/AFSC-Manager/releases";
     private static readonly HttpClient Client=CreateClient();
 
-    public async Task<UpdateInfoItem> CheckAsync(string repository,CancellationToken cancellationToken=default)
+    public async Task<UpdateInfoItem> CheckAsync(CancellationToken cancellationToken=default)
     {
-        var (owner,name)=ParseRepository(repository);
+        var (owner,name)=ParseRepository(Repository);
         using var response=await Client.GetAsync($"https://api.github.com/repos/{owner}/{name}/releases/latest",cancellationToken);
         if(!response.IsSuccessStatusCode)throw new InvalidOperationException($"GitHub Release를 확인하지 못했습니다. HTTP {(int)response.StatusCode}");
         await using var stream=await response.Content.ReadAsStreamAsync(cancellationToken);using var json=await JsonDocument.ParseAsync(stream,cancellationToken:cancellationToken);var root=json.RootElement;

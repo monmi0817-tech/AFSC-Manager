@@ -184,7 +184,7 @@
 </StackPanel>
       <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,18,0,12">
        <StackPanel>
-        <WrapPanel>
+        <WrapPanel Visibility="Collapsed">
 <StackPanel Width="65">
 <TextBlock Text="학년"/>
 <ComboBox x:Name="StudentGradeBox" IsEditable="True" Tag="Student:Grade" DropDownOpened="StudentSelector_DropDownOpened" SelectionChanged="StudentSelector_SelectionChanged"/>
@@ -249,7 +249,7 @@
 </StackPanel>
 <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,18,0,12">
 <StackPanel>
-<WrapPanel>
+<WrapPanel Visibility="Collapsed">
 <StackPanel Width="175">
 <TextBlock Text="지원제도"/>
 <ComboBox x:Name="SupportProgramCombo" SelectedIndex="0">
@@ -280,6 +280,7 @@
 </WrapPanel>
 <StackPanel Orientation="Horizontal" Margin="0,9,0,0">
 <Button Content="대상자 추가" Click="AddEligibility_Click" Style="{StaticResource Primary}"/>
+<Button Content="선택 수정" Click="UpdateEligibility_Click"/>
 <Button Content="선택 삭제" Click="DeleteEligibility_Click"/>
 <Button Content="입력 지우기" Click="ClearEligibilityInputs_Click"/>
 <Button Content="전체 삭제" Click="DeleteAllEligibilities_Click" Foreground="#B42318"/>
@@ -318,7 +319,7 @@
 </StackPanel>
 <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,18,0,12">
 <StackPanel>
-<WrapPanel>
+<WrapPanel Visibility="Collapsed">
 <StackPanel Width="140">
 <TextBlock Text="부서명"/>
 <TextBox x:Name="DeptNameBox"/>
@@ -394,7 +395,7 @@
 </StackPanel>
 <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,18,0,12">
 <StackPanel>
-<WrapPanel>
+<WrapPanel Visibility="Collapsed">
 <StackPanel Width="65">
 <TextBlock Text="학년"/>
 <ComboBox x:Name="EnrollGradeBox" IsEditable="True" Tag="Enroll:Grade" DropDownOpened="StudentSelector_DropDownOpened" SelectionChanged="StudentSelector_SelectionChanged"/>
@@ -425,7 +426,7 @@
 <Button Content="전체 삭제" Click="DeleteAllEnrollments_Click" Foreground="#B42318"/>
 </StackPanel>
 </WrapPanel>
-<WrapPanel Margin="0,10,0,0">
+<WrapPanel Margin="0,10,0,0" Visibility="Collapsed">
 <StackPanel Width="110">
 <TextBlock Text="실제 강사료"/>
 <TextBox x:Name="ActualInstructorBox"/>
@@ -450,7 +451,33 @@
 <Button Content="실제금액 변경" Click="UpdateEnrollmentAmounts_Click" Style="{StaticResource Primary}"/>
 <Button Content="수강취소" Click="CancelEnrollment_Click"/>
 </StackPanel>
-<TextBox x:Name="EnrollmentSearchBox" Width="190" VerticalAlignment="Bottom" TextChanged="EnrollmentSearch_TextChanged"/>
+<TextBox x:Name="LegacyEnrollmentSearchBox" Width="190" VerticalAlignment="Bottom"/>
+</WrapPanel>
+<WrapPanel Margin="0,2,0,0">
+<Button Content="수강 추가" Click="AddEnrollment_Click" Style="{StaticResource Primary}"/>
+<Button Content="선택 수정" Click="UpdateEnrollmentAmounts_Click"/>
+<Button Content="수강취소" Click="CancelEnrollment_Click"/>
+<Button Content="입력 오류 삭제" Click="DeleteEnrollment_Click"/>
+<Button Content="입력 지우기" Click="ClearEnrollmentInputs_Click"/>
+<Button Content="전체 삭제" Click="DeleteAllEnrollments_Click" Foreground="#B42318"/>
+<Button Content="업로드 양식" Click="EnrollmentTemplate_Click"/>
+<Button Content="Excel 가져오기" Click="EnrollmentImport_Click"/>
+<Button Content="부서금액 다시 불러오기" Click="RefreshDepartmentFees_Click"/>
+<Grid Width="190" VerticalAlignment="Center" Margin="3">
+<TextBox x:Name="EnrollmentSearchBox" TextChanged="EnrollmentSearch_TextChanged"/>
+<TextBlock Text="검색" Foreground="#98A2B3" Margin="12,0" VerticalAlignment="Center" IsHitTestVisible="False">
+<TextBlock.Style>
+<Style TargetType="TextBlock">
+<Setter Property="Visibility" Value="Collapsed"/>
+<Style.Triggers>
+<DataTrigger Binding="{Binding Text, ElementName=EnrollmentSearchBox}" Value="">
+<Setter Property="Visibility" Value="Visible"/>
+</DataTrigger>
+</Style.Triggers>
+</Style>
+</TextBlock.Style>
+</TextBlock>
+</Grid>
 </WrapPanel>
 </StackPanel>
 </Border>
@@ -996,22 +1023,14 @@
 <Border Style="{StaticResource Card}" Margin="0,0,0,12">
 <StackPanel>
 <TextBlock Text="GitHub Release 업데이트" FontSize="18" FontWeight="SemiBold"/>
-<TextBlock Text="저장소 주소와 Release 정보만 인터넷으로 확인합니다. 학생정보와 업무 DB는 전송하지 않습니다." Foreground="#6E7A90" Margin="0,4,0,10"/>
-<Grid>
-<Grid.ColumnDefinitions>
-<ColumnDefinition/>
-<ColumnDefinition Width="Auto"/>
-</Grid.ColumnDefinitions>
-<TextBox x:Name="GitHubRepositoryBox" VerticalContentAlignment="Center" ToolTip="예: monmi0817-tech/저장소명"/>
-<StackPanel Grid.Column="1" Orientation="Horizontal">
-<Button Content="설정 저장" Click="SaveMaintenanceSettings_Click"/>
+<TextBlock Text="공식 Release 정보만 확인합니다. 학생정보와 업무 DB는 전송하지 않습니다." Foreground="#6E7A90" Margin="0,4,0,10"/>
+<StackPanel Orientation="Horizontal">
 <Button x:Name="CheckUpdateButton" Content="업데이트 확인" Click="CheckUpdate_Click" Style="{StaticResource Primary}"/>
 <Button x:Name="DownloadUpdateButton" Content="설치파일 다운로드" Click="DownloadUpdate_Click" IsEnabled="False"/>
-<Button x:Name="OpenReleaseButton" Content="Release 페이지" Click="OpenRelease_Click" IsEnabled="False"/>
+<Button x:Name="OpenReleaseButton" Content="Release 페이지 이동" Click="OpenRelease_Click"/>
 </StackPanel>
-</Grid>
 <ProgressBar x:Name="UpdateProgress" Height="10" Minimum="0" Maximum="100" Margin="3,10,3,4"/>
-<TextBlock x:Name="UpdateStatusText" Text="저장소를 owner/repository 형식으로 입력하세요." Foreground="#4D5A70" TextWrapping="Wrap"/>
+<TextBlock x:Name="UpdateStatusText" Text="업데이트 확인을 누르면 최신 Release를 확인합니다." Foreground="#4D5A70" TextWrapping="Wrap"/>
 </StackPanel>
 </Border>
 <Border Style="{StaticResource Card}" Margin="0">

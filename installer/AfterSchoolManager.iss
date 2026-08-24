@@ -1,6 +1,6 @@
 #define MyAppName "방과후 수강·지원금 통합 관리"
 #ifndef MyAppVersion
-  #define MyAppVersion "0.5.6"
+  #define MyAppVersion "1.0.0"
 #endif
 #define MyAppPublisher "AfterSchoolIntegratedManager"
 #define MyAppExeName "AfterSchoolManager.exe"

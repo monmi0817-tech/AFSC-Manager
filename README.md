@@ -63,7 +63,7 @@ dotnet run --project .\src\AfterSchoolManager\AfterSchoolManager.csproj
 
 1. .NET 8 SDK와 Inno Setup 6을 설치합니다.
 2. `build-installer.ps1`을 실행합니다.
-3. `artifacts\installer\AfterSchoolIntegratedManager-Setup-v0.5.6.exe`를 배포합니다.
+3. `artifacts\installer\AfterSchoolIntegratedManager-Setup-v1.0.0.exe`를 배포합니다.
 
 설치파일은 앱만 `%LOCALAPPDATA%\Programs\AfterSchoolIntegratedManager`에 설치합니다. 업무 DB는 별도 경로에 유지되며 제거 프로그램에서도 삭제하지 않습니다.
 
@@ -71,7 +71,7 @@ dotnet run --project .\src\AfterSchoolManager\AfterSchoolManager.csproj
 
 앱의 `백업 · 복원 · 업데이트` 화면에서 `owner/repository` 형식으로 저장소를 입력합니다. 예: `monmi0817-tech/저장소명`.
 
-저장소에 `v0.5.6`처럼 `v`로 시작하는 태그를 푸시하면 `.github/workflows/release.yml`이 Windows 설치파일을 생성하여 Release에 첨부합니다. 앱은 사용자가 `업데이트 확인`을 눌렀을 때만 Release 정보를 확인합니다.
+저장소에 `v1.0.0`처럼 `v`로 시작하는 태그를 푸시하면 `.github/workflows/release.yml`이 Windows 설치파일을 생성하여 Release에 첨부합니다. 앱은 사용자가 `업데이트 확인`을 눌렀을 때만 `monmi0817-tech/AFSC-Manager`의 Release 정보를 확인합니다.
 
 ## 데이터 저장 위치
 
