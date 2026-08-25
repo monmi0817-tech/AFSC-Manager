@@ -2,7 +2,7 @@
 
 전교생 정보부터 수강, 지원 자격, 정산, 부서별 품의까지 연결하기 위한 Windows 로컬 데스크톱 앱입니다.
 
-현재 구현 범위는 **MVP 7 / v1.1.0**입니다.
+현재 구현 범위는 **MVP 7 / v1.1.1**입니다.
 
 - 작업공간 생성·선택
 - 전교생 학생정보 직접 입력·수정·삭제·Excel 가져오기/양식 받기
@@ -65,13 +65,13 @@ dotnet run --project .\src\AfterSchoolManager\AfterSchoolManager.csproj
 
 1. .NET 8 SDK와 Inno Setup 6을 설치합니다.
 2. `build-installer.ps1`을 실행합니다.
-3. `artifacts\installer\AfterSchoolIntegratedManager-Setup-v1.1.0.exe`를 배포합니다.
+3. `artifacts\installer\AfterSchoolIntegratedManager-Setup-v1.1.1.exe`를 배포합니다.
 
 설치파일은 앱만 `%LOCALAPPDATA%\Programs\AfterSchoolIntegratedManager`에 설치합니다. 업무 DB는 별도 경로에 유지되며 제거 프로그램에서도 삭제하지 않습니다.
 
 ## GitHub Release 업데이트 설정
 
-저장소에 `v1.1.0`처럼 `v`로 시작하는 태그를 푸시하면 `.github/workflows/release.yml`이 Windows 설치파일을 생성하여 Release에 첨부합니다. 앱은 사용자가 `업데이트 확인`을 눌렀을 때만 고정된 `monmi0817-tech/AFSC-Manager`의 Release 정보를 확인합니다. 화면에는 저장소 주소를 노출하지 않습니다.
+저장소에 `v1.1.1`처럼 `v`로 시작하는 태그를 푸시하면 `.github/workflows/release.yml`이 Windows 설치파일을 생성하여 Release에 첨부합니다. 앱은 사용자가 `업데이트 확인`을 눌렀을 때만 고정된 `monmi0817-tech/AFSC-Manager`의 Release 정보를 확인합니다. 화면에는 저장소 주소를 노출하지 않습니다.
 
 ## 데이터 저장 위치
 
