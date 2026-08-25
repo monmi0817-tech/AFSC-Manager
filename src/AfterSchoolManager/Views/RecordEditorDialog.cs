@@ -145,11 +145,11 @@ public sealed class RecordEditorDialog : Window
         if(sender is not ComboBox combo)return;combo.ApplyTemplate();
         if(combo.Template.FindName("PART_EditableTextBox",combo) is TextBox editor)
         {
-            editor.Margin=new Thickness(38,0,38,0);editor.TextAlignment=TextAlignment.Center;
+            editor.Margin=new Thickness(10,0,34,0);editor.TextAlignment=TextAlignment.Center;
         }
         if(combo.Template.FindName("SelectionContent",combo) is ContentPresenter content)
         {
-            content.Margin=new Thickness(38,0,38,0);content.HorizontalAlignment=HorizontalAlignment.Stretch;
+            content.Margin=new Thickness(10,0,34,0);content.HorizontalAlignment=HorizontalAlignment.Stretch;
             content.SetValue(TextBlock.TextAlignmentProperty,TextAlignment.Center);
         }
     }

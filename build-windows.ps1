@@ -10,7 +10,7 @@ Write-Host "Restoring packages..."
 dotnet restore $projectPath
 if ($LASTEXITCODE -ne 0) { throw "Package restore failed." }
 
-Write-Host "Building MVP 5..."
+Write-Host "Building AfterSchoolManager v$Version..."
 dotnet build $projectPath -c Release --no-restore -p:Version=$Version
 if ($LASTEXITCODE -ne 0) { throw "Build failed." }
 

@@ -50,6 +50,39 @@ public sealed class DepartmentItem
     public long OperatingFee { get; init; }
     public long TextbookFee { get; init; }
     public long MaterialFee { get; init; }
+    public long TotalFee => InstructorFee + OperatingFee + TextbookFee + MaterialFee;
+}
+
+public sealed class DepartmentStudentFeeEditItem : System.ComponentModel.INotifyPropertyChanged
+{
+    private long _instructorFee;
+    private long _operatingFee;
+    private long _textbookFee;
+    private long _materialFee;
+    public long EnrollmentId { get; init; }
+    public int Grade { get; init; }
+    public string ClassName { get; init; } = "";
+    public int StudentNumber { get; init; }
+    public string StudentName { get; init; } = "";
+    public long OriginalInstructorFee { get; init; }
+    public long OriginalOperatingFee { get; init; }
+    public long OriginalTextbookFee { get; init; }
+    public long OriginalMaterialFee { get; init; }
+    public long InstructorFee { get=>_instructorFee; set{if(_instructorFee==value)return;_instructorFee=value;Changed(nameof(InstructorFee));Changed(nameof(TotalFee));} }
+    public long OperatingFee { get=>_operatingFee; set{if(_operatingFee==value)return;_operatingFee=value;Changed(nameof(OperatingFee));Changed(nameof(TotalFee));} }
+    public long TextbookFee { get=>_textbookFee; set{if(_textbookFee==value)return;_textbookFee=value;Changed(nameof(TextbookFee));Changed(nameof(TotalFee));} }
+    public long MaterialFee { get=>_materialFee; set{if(_materialFee==value)return;_materialFee=value;Changed(nameof(MaterialFee));Changed(nameof(TotalFee));} }
+    public long TotalFee=>InstructorFee+OperatingFee+TextbookFee+MaterialFee;
+    public bool IsChanged=>InstructorFee!=OriginalInstructorFee||OperatingFee!=OriginalOperatingFee||TextbookFee!=OriginalTextbookFee||MaterialFee!=OriginalMaterialFee;
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+    private void Changed(string name)=>PropertyChanged?.Invoke(this,new System.ComponentModel.PropertyChangedEventArgs(name));
+
+    public static DepartmentStudentFeeEditItem FromEnrollment(EnrollmentItem item)=>new()
+    {
+        EnrollmentId=item.Id,Grade=item.Grade,ClassName=item.ClassName,StudentNumber=item.StudentNumber,StudentName=item.StudentName,
+        OriginalInstructorFee=item.InstructorFee,OriginalOperatingFee=item.OperatingFee,OriginalTextbookFee=item.TextbookFee,OriginalMaterialFee=item.MaterialFee,
+        InstructorFee=item.InstructorFee,OperatingFee=item.OperatingFee,TextbookFee=item.TextbookFee,MaterialFee=item.MaterialFee
+    };
 }
 
 public sealed class EnrollmentItem

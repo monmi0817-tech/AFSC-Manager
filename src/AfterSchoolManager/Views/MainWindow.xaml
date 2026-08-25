@@ -356,6 +356,7 @@
 <StackPanel Orientation="Horizontal" Margin="0,9,0,0">
 <Button Content="추가" Click="AddDepartment_Click" Style="{StaticResource Primary}"/>
 <Button Content="선택 수정" Click="UpdateDepartment_Click"/>
+<Button Content="학생별 수정" Click="EditDepartmentStudentFees_Click"/>
 <Button Content="선택 삭제" Click="DeleteDepartment_Click"/>
 <Button Content="입력 지우기" Click="ClearDepartmentInputs_Click"/>
 <Button Content="전체 삭제" Click="DeleteAllDepartments_Click" Foreground="#B42318"/>
@@ -375,6 +376,7 @@
 <DataGridTextColumn Header="수용비" Binding="{Binding OperatingFee, StringFormat=N0}" Width="95"/>
 <DataGridTextColumn Header="교재비" Binding="{Binding TextbookFee, StringFormat=N0}" Width="95"/>
 <DataGridTextColumn Header="재료비" Binding="{Binding MaterialFee, StringFormat=N0}" Width="95"/>
+<DataGridTextColumn Header="합계" Binding="{Binding TotalFee, StringFormat=N0}" Width="105"/>
 </DataGrid.Columns>
 </DataGrid>
 </Border>

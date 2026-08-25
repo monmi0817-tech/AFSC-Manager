@@ -2,7 +2,7 @@
 
 전교생 정보부터 수강, 지원 자격, 정산, 부서별 품의까지 연결하기 위한 Windows 로컬 데스크톱 앱입니다.
 
-현재 구현 범위는 **MVP 5**입니다.
+현재 구현 범위는 **MVP 7 / v1.0.0**입니다.
 
 - 작업공간 생성·선택
 - 전교생 학생정보 직접 입력·수정·삭제·Excel 가져오기/양식 받기
@@ -10,6 +10,7 @@
 - 이용권 대상 학년 저장 시 기존 학생 지원유형 자동 동기화
 - 학생명단 기반 학년·반·번호·이름 편집형 드롭다운과 입력값 초기화
 - 부서 및 항목별 기본 수강료 직접 입력·Excel 가져오기
+- 부서별 기본 수강료 합계 표시와 수강중 학생별 항목 금액 일괄 수정
 - 수강 데이터 직접 입력·Excel 가져오기
 - 실제 수강 데이터가 있는 학생만 표시하는 수강생 명단
 - SQLite 로컬 저장, 외래키·중복 제약·인덱스
@@ -69,9 +70,7 @@ dotnet run --project .\src\AfterSchoolManager\AfterSchoolManager.csproj
 
 ## GitHub Release 업데이트 설정
 
-앱의 `백업 · 복원 · 업데이트` 화면에서 `owner/repository` 형식으로 저장소를 입력합니다. 예: `monmi0817-tech/저장소명`.
-
-저장소에 `v1.0.0`처럼 `v`로 시작하는 태그를 푸시하면 `.github/workflows/release.yml`이 Windows 설치파일을 생성하여 Release에 첨부합니다. 앱은 사용자가 `업데이트 확인`을 눌렀을 때만 `monmi0817-tech/AFSC-Manager`의 Release 정보를 확인합니다.
+저장소에 `v1.0.0`처럼 `v`로 시작하는 태그를 푸시하면 `.github/workflows/release.yml`이 Windows 설치파일을 생성하여 Release에 첨부합니다. 앱은 사용자가 `업데이트 확인`을 눌렀을 때만 고정된 `monmi0817-tech/AFSC-Manager`의 Release 정보를 확인합니다. 화면에는 저장소 주소를 노출하지 않습니다.
 
 ## 데이터 저장 위치
 

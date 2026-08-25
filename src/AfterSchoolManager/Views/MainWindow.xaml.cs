@@ -367,6 +367,24 @@ public partial class MainWindow : Window
         TryRun(()=>_db.SaveDepartment(id,Current.AcademicYearId,dialog.DepartmentName,dialog.SectionName,dialog.Weekdays,dialog.InstructorName,
             dialog.InstructorFee,dialog.OperatingFee,dialog.TextbookFee,dialog.MaterialFee),message);
     }
+    private void EditDepartmentStudentFees_Click(object sender,RoutedEventArgs e)
+    {
+        if(Current is null)return;
+        if(DepartmentGrid.SelectedItem is not DepartmentItem department){MessageBox.Show("학생별 금액을 수정할 부서를 선택하세요.");return;}
+        var enrollments=_db.GetEnrollments(Current.Id)
+            .Where(x=>x.DepartmentId==department.Id&&x.StatusCode=="ACTIVE")
+            .OrderBy(x=>x.Grade).ThenBy(x=>x.ClassName).ThenBy(x=>x.StudentNumber).ThenBy(x=>x.StudentName).ToArray();
+        if(enrollments.Length==0){MessageBox.Show("선택한 부서에 현재 수강중인 학생이 없습니다.");return;}
+        var dialog=new DepartmentStudentFeeDialog(department,enrollments){Owner=this};
+        if(dialog.ShowDialog()!=true)return;
+        try
+        {
+            var changed=_db.UpdateDepartmentStudentAmounts(Current.Id,department.Id,dialog.Items.ToArray(),dialog.ChangeReason);
+            RefreshAll();
+            MessageBox.Show($"{changed:N0}명의 학생별 금액을 수정했습니다. 기존 정산 데이터가 있다면 다시 생성해 주세요.","저장 완료",MessageBoxButton.OK,MessageBoxImage.Information);
+        }
+        catch(Exception ex){ShowError(ex);}
+    }
     private void DeleteDepartment_Click(object sender, RoutedEventArgs e)
     {
         if (DepartmentGrid.SelectedItem is not DepartmentItem item){MessageBox.Show("삭제할 부서를 선택하세요.");return;}
@@ -464,8 +482,14 @@ public partial class MainWindow : Window
             var student=matches[0];FillStudentSelector("Detail",student);
             var detail=_db.GetStudentDetail(Current.AcademicYearId,student.Grade,student.ClassName,student.StudentNumber,student.Name);
             var s=detail.Summary;DetailStudentText.Text=$"{s.StudentName} · {s.Grade}학년 {s.ClassName}반 {s.StudentNumber}번\n{s.SupportType}";
-            DetailVoucherText.Text=$"한도 {s.VoucherBudget:N0}원\n사용 {s.VoucherUsed:N0}원 · 잔액 {s.VoucherBalance:N0}원";
-            DetailFreeText.Text=$"한도 {s.FreeBudget:N0}원\n사용 {s.FreeUsed:N0}원 · 잔액 {s.FreeBalance:N0}원";
+            var hasVoucher=s.SupportType.Contains("방과후 이용권",StringComparison.Ordinal);
+            var hasFreeVoucher=s.SupportType.Contains("자유수강권",StringComparison.Ordinal);
+            DetailVoucherText.Text=hasVoucher
+                ? $"한도 {s.VoucherBudget:N0}원\n사용 {s.VoucherUsed:N0}원 · 잔액 {s.VoucherBalance:N0}원"
+                : "해당없음";
+            DetailFreeText.Text=hasFreeVoucher
+                ? $"한도 {s.FreeBudget:N0}원\n사용 {s.FreeUsed:N0}원 · 잔액 {s.FreeBalance:N0}원"
+                : "해당없음";
             StudentUsageGrid.ItemsSource=detail.Usage;
         }
         catch(Exception ex){ShowError(ex);}

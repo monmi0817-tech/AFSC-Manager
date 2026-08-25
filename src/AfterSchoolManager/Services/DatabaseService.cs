@@ -554,6 +554,45 @@ public sealed class DatabaseService
         IncrementWorkspaceRevision(connection,transaction,workspaceId);transaction.Commit();
     }
 
+    public int UpdateDepartmentStudentAmounts(long workspaceId,long departmentId,IReadOnlyList<DepartmentStudentFeeEditItem> rows,string reason)
+    {
+        if(string.IsNullOrWhiteSpace(reason))throw new ArgumentException("금액 변경 사유를 입력하세요.");
+        var changedRows=rows.Where(x=>x.IsChanged).ToArray();
+        if(changedRows.Length==0)throw new InvalidOperationException("변경된 학생별 금액이 없습니다.");
+        if(changedRows.Any(x=>new[]{x.InstructorFee,x.OperatingFee,x.TextbookFee,x.MaterialFee}.Any(amount=>amount<0)))throw new ArgumentException("학생별 금액은 0 이상이어야 합니다.");
+        using var connection=Open();using var transaction=connection.BeginTransaction();var changedStudents=new HashSet<long>();
+        foreach(var row in changedRows)
+        {
+            var values=new Dictionary<string,long>{{"INSTRUCTOR",row.InstructorFee},{"OPERATING",row.OperatingFee},{"TEXTBOOK",row.TextbookFee},{"MATERIAL",row.MaterialFee}};
+            foreach(var pair in values)
+            {
+                long chargeId,oldAmount;
+                using(var read=connection.CreateCommand())
+                {
+                    read.Transaction=transaction;read.CommandText="""
+                        SELECT c.id,c.actual_amount FROM charge c JOIN enrollment e ON e.id=c.enrollment_id
+                        WHERE e.id=$enrollment AND e.workspace_id=$workspace AND e.department_id=$department
+                          AND e.status='ACTIVE' AND c.charge_type=$type;
+                        """;
+                    read.Parameters.AddWithValue("$enrollment",row.EnrollmentId);read.Parameters.AddWithValue("$workspace",workspaceId);
+                    read.Parameters.AddWithValue("$department",departmentId);read.Parameters.AddWithValue("$type",pair.Key);
+                    using var reader=read.ExecuteReader();if(!reader.Read())throw new InvalidOperationException($"{row.StudentName} 학생의 수강 비용 데이터를 찾지 못했습니다.");
+                    chargeId=reader.GetInt64(0);oldAmount=reader.GetInt64(1);
+                }
+                if(oldAmount==pair.Value)continue;
+                using(var update=connection.CreateCommand())
+                {
+                    update.Transaction=transaction;update.CommandText="UPDATE charge SET actual_amount=$amount,change_reason=$reason,updated_at=CURRENT_TIMESTAMP WHERE id=$id;";
+                    update.Parameters.AddWithValue("$amount",pair.Value);update.Parameters.AddWithValue("$reason",reason.Trim());update.Parameters.AddWithValue("$id",chargeId);update.ExecuteNonQuery();
+                }
+                AddHistory(connection,transaction,workspaceId,"CHARGE",chargeId,"AMOUNT_CHANGE",pair.Key+".actual_amount",oldAmount.ToString(),pair.Value.ToString(),reason.Trim());
+                changedStudents.Add(row.EnrollmentId);
+            }
+        }
+        if(changedStudents.Count==0)throw new InvalidOperationException("변경된 학생별 금액이 없습니다.");
+        IncrementWorkspaceRevision(connection,transaction,workspaceId);transaction.Commit();return changedStudents.Count;
+    }
+
     public (int UpdatedEnrollments,int PreservedManualCharges) RefreshDepartmentFees(long workspaceId)
     {
         using var connection=Open();using var transaction=connection.BeginTransaction();int enrollments,preserved;
