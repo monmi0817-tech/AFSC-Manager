@@ -60,7 +60,7 @@ public sealed class BackupService
                 var database=archive.GetEntry("database.sqlite")??throw new InvalidDataException("백업파일에 업무 DB가 없습니다.");
                 using var source=database.Open();using var target=File.Create(tempDb);source.CopyTo(target);
             }
-            var schemaVersion=ValidateDatabase(tempDb);if(schemaVersion>4)throw new InvalidDataException("현재 프로그램보다 새로운 DB 버전의 백업입니다. 프로그램을 먼저 업데이트하세요.");
+            var schemaVersion=ValidateDatabase(tempDb);if(schemaVersion>5)throw new InvalidDataException("현재 프로그램보다 새로운 DB 버전의 백업입니다. 프로그램을 먼저 업데이트하세요.");
             BackupDatabase(tempDb,_databasePath);ValidateDatabase(_databasePath);
             return safetyPath;
         }

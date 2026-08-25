@@ -757,6 +757,42 @@
 </Border>
 <Border Style="{StaticResource Card}" Margin="0,8,0,12">
 <StackPanel>
+<TextBlock Text="방과후 이용권 차감 우선순위" FontSize="18" FontWeight="SemiBold"/>
+<TextBlock Text="위에 있는 부서와 비용 항목부터 이용권을 차감하며, 한도 소진 이후 금액은 이용권 초과금으로 처리합니다." Foreground="#6E7A90" Margin="0,4,0,12"/>
+<Grid>
+<Grid.ColumnDefinitions>
+<ColumnDefinition Width="*"/>
+<ColumnDefinition Width="24"/>
+<ColumnDefinition Width="*"/>
+</Grid.ColumnDefinitions>
+<StackPanel Grid.Column="0">
+<TextBlock Text="부서 우선순위" FontWeight="SemiBold" Margin="0,0,0,7"/>
+<DockPanel LastChildFill="True">
+<StackPanel DockPanel.Dock="Right" Margin="8,0,0,0">
+<Button Content="상위" Click="MoveDepartmentPriorityUp_Click" MinWidth="72"/>
+<Button Content="하위" Click="MoveDepartmentPriorityDown_Click" MinWidth="72"/>
+</StackPanel>
+<ListBox x:Name="DepartmentPriorityList" DisplayMemberPath="DisplayText" Height="210" HorizontalContentAlignment="Center"/>
+</DockPanel>
+<TextBlock Text="이용권 대상 학생이 수강 중인 부서만 표시됩니다." Foreground="#7A879B" Margin="0,6,0,0"/>
+</StackPanel>
+<StackPanel Grid.Column="2">
+<TextBlock Text="비용 항목 우선순위" FontWeight="SemiBold" Margin="0,0,0,7"/>
+<DockPanel LastChildFill="True">
+<StackPanel DockPanel.Dock="Right" Margin="8,0,0,0">
+<Button Content="상위" Click="MoveChargePriorityUp_Click" MinWidth="72"/>
+<Button Content="하위" Click="MoveChargePriorityDown_Click" MinWidth="72"/>
+</StackPanel>
+<ListBox x:Name="ChargePriorityList" DisplayMemberPath="DisplayText" Height="210" HorizontalContentAlignment="Center"/>
+</DockPanel>
+<TextBlock Text="강사료·수용비·교재비·재료비의 차감 순서를 지정합니다." Foreground="#7A879B" Margin="0,6,0,0"/>
+</StackPanel>
+</Grid>
+<Button Content="차감 우선순위 저장" Click="SaveVoucherPriorities_Click" Style="{StaticResource Primary}" HorizontalAlignment="Left" Margin="0,14,0,0"/>
+</StackPanel>
+</Border>
+<Border Style="{StaticResource Card}" Margin="0,8,0,12">
+<StackPanel>
 <TextBlock Text="학생별 지원 한도 예외" FontSize="18" FontWeight="SemiBold"/>
 <WrapPanel Margin="0,12,0,0">
 <StackPanel Width="165">

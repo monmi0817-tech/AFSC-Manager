@@ -713,6 +713,99 @@ public sealed class DatabaseService
         return new SupportSettingsItem{VoucherDefault=r.GetInt64(0),FreeVoucherDefault=r.GetInt64(1),SourcePriority=r.GetString(2),VoucherGrades=r.GetString(3)};
     }
 
+    public IReadOnlyList<PriorityItem> GetVoucherDepartmentPriorities(long academicYearId)
+    {
+        using var connection=Open();using var cmd=connection.CreateCommand();
+        cmd.CommandText="""
+            WITH voucher_departments AS (
+              SELECT DISTINCT d.id,d.name,d.section_name
+              FROM department d
+              JOIN enrollment e ON e.department_id=d.id AND e.status='ACTIVE'
+              JOIN workspace w ON w.id=e.workspace_id AND w.academic_year_id=d.academic_year_id
+              WHERE d.academic_year_id=$year AND d.is_active=1
+                AND EXISTS(
+                  SELECT 1 FROM support_eligibility se
+                  JOIN support_program sp ON sp.id=se.program_id AND sp.code='VOUCHER'
+                  WHERE se.student_id=e.student_id)
+            )
+            SELECT d.id,CASE WHEN d.section_name='' THEN d.name ELSE d.name||' '||d.section_name END,
+                   COALESCE(p.priority,999999)
+            FROM voucher_departments d
+            LEFT JOIN department_priority p ON p.academic_year_id=$year AND p.department_id=d.id
+            ORDER BY CASE WHEN p.priority IS NULL THEN 1 ELSE 0 END,p.priority,d.name,d.section_name;
+            """;
+        cmd.Parameters.AddWithValue("$year",academicYearId);using var r=cmd.ExecuteReader();var result=new List<PriorityItem>();var order=1;
+        while(r.Read())result.Add(new PriorityItem{Key=r.GetInt64(0).ToString(CultureInfo.InvariantCulture),DisplayName=r.GetString(1),Order=order++});
+        return result;
+    }
+
+    public IReadOnlyList<PriorityItem> GetChargeTypePriorities(long academicYearId)
+    {
+        using var connection=Open();using var cmd=connection.CreateCommand();
+        cmd.CommandText="""
+            WITH fee_type(code,display_name,default_order) AS (
+              VALUES('INSTRUCTOR','강사료',1),('OPERATING','수용비',2),('TEXTBOOK','교재비',3),('MATERIAL','재료비',4)
+            )
+            SELECT f.code,f.display_name
+            FROM fee_type f LEFT JOIN charge_type_priority p
+              ON p.academic_year_id=$year AND p.charge_type=f.code
+            ORDER BY COALESCE(p.priority,f.default_order),f.default_order;
+            """;
+        cmd.Parameters.AddWithValue("$year",academicYearId);using var r=cmd.ExecuteReader();var result=new List<PriorityItem>();var order=1;
+        while(r.Read())result.Add(new PriorityItem{Key=r.GetString(0),DisplayName=r.GetString(1),Order=order++});
+        return result;
+    }
+
+    public void SaveVoucherAllocationPriorities(long academicYearId,IReadOnlyList<long> departmentIds,IReadOnlyList<string> chargeTypes)
+    {
+        if(departmentIds.Count!=departmentIds.Distinct().Count())throw new ArgumentException("부서 우선순위에 중복된 부서가 있습니다.");
+        var requiredTypes=new HashSet<string>(new[]{"INSTRUCTOR","OPERATING","TEXTBOOK","MATERIAL"},StringComparer.Ordinal);
+        if(chargeTypes.Count!=4||!requiredTypes.SetEquals(chargeTypes))throw new ArgumentException("강사료·수용비·교재비·재료비 우선순위를 모두 지정하세요.");
+        using var connection=Open();using var transaction=connection.BeginTransaction();
+        foreach(var departmentId in departmentIds)
+        {
+            using var check=connection.CreateCommand();check.Transaction=transaction;
+            check.CommandText="SELECT COUNT(*) FROM department WHERE id=$department AND academic_year_id=$year AND is_active=1;";
+            check.Parameters.AddWithValue("$department",departmentId);check.Parameters.AddWithValue("$year",academicYearId);
+            if(Convert.ToInt32(check.ExecuteScalar())!=1)throw new InvalidOperationException("학년도에 속하지 않은 부서가 우선순위에 포함되어 있습니다.");
+        }
+        using(var delete=connection.CreateCommand())
+        {
+            delete.Transaction=transaction;delete.CommandText="DELETE FROM department_priority WHERE academic_year_id=$year;";
+            delete.Parameters.AddWithValue("$year",academicYearId);delete.ExecuteNonQuery();
+        }
+        for(var i=0;i<departmentIds.Count;i++)
+        {
+            using var add=connection.CreateCommand();add.Transaction=transaction;
+            add.CommandText="INSERT INTO department_priority(academic_year_id,department_id,priority) VALUES($year,$department,$priority);";
+            add.Parameters.AddWithValue("$year",academicYearId);add.Parameters.AddWithValue("$department",departmentIds[i]);add.Parameters.AddWithValue("$priority",i+1);add.ExecuteNonQuery();
+        }
+        using(var delete=connection.CreateCommand())
+        {
+            delete.Transaction=transaction;delete.CommandText="DELETE FROM charge_type_priority WHERE academic_year_id=$year;";
+            delete.Parameters.AddWithValue("$year",academicYearId);delete.ExecuteNonQuery();
+        }
+        for(var i=0;i<chargeTypes.Count;i++)
+        {
+            using var add=connection.CreateCommand();add.Transaction=transaction;
+            add.CommandText="INSERT INTO charge_type_priority(academic_year_id,charge_type,priority) VALUES($year,$type,$priority);";
+            add.Parameters.AddWithValue("$year",academicYearId);add.Parameters.AddWithValue("$type",chargeTypes[i]);add.Parameters.AddWithValue("$priority",i+1);add.ExecuteNonQuery();
+        }
+        using(var other=connection.CreateCommand())
+        {
+            other.Transaction=transaction;other.CommandText="INSERT INTO charge_type_priority(academic_year_id,charge_type,priority) VALUES($year,'OTHER',5);";
+            other.Parameters.AddWithValue("$year",academicYearId);other.ExecuteNonQuery();
+        }
+        using(var revision=connection.CreateCommand())
+        {
+            revision.Transaction=transaction;revision.CommandText="UPDATE academic_year SET policy_revision=policy_revision+1 WHERE id=$year;";
+            revision.Parameters.AddWithValue("$year",academicYearId);revision.ExecuteNonQuery();
+        }
+        AddYearHistory(connection,transaction,academicYearId,"SUPPORT_POLICY",academicYearId,"UPDATE","voucher_allocation_priority",null,
+            $"departments={string.Join(",",departmentIds)};charges={string.Join(",",chargeTypes)}","이용권 부서·항목 차감 우선순위 변경");
+        transaction.Commit();
+    }
+
     public void SaveSupportSettings(long academicYearId,long voucherDefault,long freeDefault,string priority,string grades)
     {
         if(voucherDefault<0||freeDefault<0)throw new ArgumentException("지원 한도는 0 이상이어야 합니다.");

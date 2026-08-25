@@ -9,8 +9,6 @@ INSERT INTO schema_info(version, applied_at)
 SELECT 1, datetime('now')
 WHERE NOT EXISTS (SELECT 1 FROM schema_info);
 
-UPDATE schema_info SET version=4, applied_at=datetime('now');
-
 CREATE TABLE IF NOT EXISTS academic_year (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     year INTEGER NOT NULL UNIQUE CHECK(year BETWEEN 2000 AND 2200),
@@ -138,6 +136,14 @@ CREATE TABLE IF NOT EXISTS department_fee (
     amount INTEGER NOT NULL DEFAULT 0 CHECK(amount >= 0),
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(department_id, charge_type)
+);
+
+CREATE TABLE IF NOT EXISTS department_priority (
+    academic_year_id INTEGER NOT NULL REFERENCES academic_year(id) ON DELETE CASCADE,
+    department_id INTEGER NOT NULL REFERENCES department(id) ON DELETE CASCADE,
+    priority INTEGER NOT NULL CHECK(priority > 0),
+    PRIMARY KEY(academic_year_id, department_id),
+    UNIQUE(academic_year_id, priority)
 );
 
 CREATE TABLE IF NOT EXISTS enrollment (
@@ -269,3 +275,5 @@ UNION ALL SELECT id,'OTHER',5 FROM academic_year;
 INSERT OR IGNORE INTO support_policy_grade(academic_year_id,program_id,grade)
 SELECT a.id,p.id,3 FROM academic_year a CROSS JOIN support_program p
 WHERE a.year=2026 AND p.code='VOUCHER';
+
+UPDATE schema_info SET version=5, applied_at=datetime('now');

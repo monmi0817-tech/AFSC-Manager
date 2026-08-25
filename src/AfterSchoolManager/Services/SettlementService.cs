@@ -280,9 +280,11 @@ public sealed class SettlementService
     private static List<ChargeDraft> ReadCharges(SqliteConnection c,long workspaceId,SqliteTransaction tx)
     {using var cmd=c.CreateCommand();cmd.Transaction=tx;cmd.CommandText="""
         SELECT c.id,e.student_id,c.actual_amount FROM charge c JOIN enrollment e ON e.id=c.enrollment_id
-        JOIN workspace w ON w.id=e.workspace_id LEFT JOIN charge_type_priority p ON p.academic_year_id=w.academic_year_id AND p.charge_type=c.charge_type
+        JOIN workspace w ON w.id=e.workspace_id
+        LEFT JOIN department_priority d ON d.academic_year_id=w.academic_year_id AND d.department_id=e.department_id
+        LEFT JOIN charge_type_priority p ON p.academic_year_id=w.academic_year_id AND p.charge_type=c.charge_type
         WHERE e.workspace_id=$workspace AND c.actual_amount>0
-        ORDER BY e.student_id,COALESCE(p.priority,99),e.allocation_order,c.id;
+        ORDER BY e.student_id,COALESCE(d.priority,999999),COALESCE(p.priority,99),e.allocation_order,c.id;
         """;cmd.Parameters.AddWithValue("$workspace",workspaceId);using var r=cmd.ExecuteReader();var list=new List<ChargeDraft>();while(r.Read())list.Add(new ChargeDraft(r.GetInt64(0),r.GetInt64(1),r.GetInt64(2)));return list;}
 
     private static HashSet<string> ReadEligibility(SqliteConnection c,long studentId,DateTime start,DateTime end,SqliteTransaction tx)

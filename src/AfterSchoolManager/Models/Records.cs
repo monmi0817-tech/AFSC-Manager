@@ -130,6 +130,20 @@ public sealed class SupportSettingsItem
     public string VoucherGrades { get; init; } = "3";
 }
 
+public sealed class PriorityItem : System.ComponentModel.INotifyPropertyChanged
+{
+    private int _order;
+    public string Key { get; init; } = "";
+    public string DisplayName { get; init; } = "";
+    public int Order
+    {
+        get=>_order;
+        set{if(_order==value)return;_order=value;PropertyChanged?.Invoke(this,new System.ComponentModel.PropertyChangedEventArgs(nameof(Order)));PropertyChanged?.Invoke(this,new System.ComponentModel.PropertyChangedEventArgs(nameof(DisplayText)));}
+    }
+    public string DisplayText=>$"{Order}. {DisplayName}";
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+}
+
 public sealed class BudgetOverrideItem
 {
     public long Id { get; init; }

@@ -1,6 +1,7 @@
 using System.IO;
 using System.Diagnostics;
 using System.Reflection;
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -29,6 +30,8 @@ public partial class MainWindow : Window
     private bool _ready;
     private bool _syncingStudentSelectors;
     private IReadOnlyList<StudentItem> _studentChoices=Array.Empty<StudentItem>();
+    private readonly ObservableCollection<PriorityItem> _departmentPriorityItems=new();
+    private readonly ObservableCollection<PriorityItem> _chargePriorityItems=new();
     private Button? _activeNavButton;
     private WorkspaceItem? Current => WorkspaceCombo.SelectedItem as WorkspaceItem;
 
@@ -37,6 +40,8 @@ public partial class MainWindow : Window
         _excel = new ExcelService(_db);
         InitializeComponent();
         ConfigureDataGridAlignment();
+        DepartmentPriorityList.ItemsSource=_departmentPriorityItems;
+        ChargePriorityList.ItemsSource=_chargePriorityItems;
         _settings=_settingsService.Load();BackupDirectoryBox.Text=_settings.BackupDirectory;
         AppVersionText.Text=$"버전 {GetAppVersion()}";DataLocationText.Text=AppPaths.DatabasePath;
         _studentSearchTimer.Tick+=(_,_)=>{_studentSearchTimer.Stop();if(_ready&&Current is not null)StudentsGrid.ItemsSource=_db.GetStudents(Current.AcademicYearId,StudentSearchBox.Text);};
@@ -145,6 +150,8 @@ public partial class MainWindow : Window
         VoucherDefaultBox.Text=settings.VoucherDefault.ToString("N0");FreeDefaultBox.Text=settings.FreeVoucherDefault.ToString("N0");VoucherGradesBox.Text=settings.VoucherGrades;
         SourcePriorityCombo.SelectedItem=SourcePriorityCombo.Items.Cast<ComboBoxItem>().FirstOrDefault(x=>x.Tag?.ToString()==settings.SourcePriority);
         BudgetOverrideGrid.ItemsSource=_db.GetBudgetOverrides(Current.AcademicYearId);
+        ReplacePriorityItems(_departmentPriorityItems,_db.GetVoucherDepartmentPriorities(Current.AcademicYearId));
+        ReplacePriorityItems(_chargePriorityItems,_db.GetChargeTypePriorities(Current.AcademicYearId));
 
         var status=_settlement.GetStatus(Current.Id);
         SettlementStatusText.Text=status.Message;DashboardSettlementText.Text=status.Message;
@@ -237,6 +244,38 @@ public partial class MainWindow : Window
         if(Current is null)return;
         var priority=(SourcePriorityCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString()??"VOUCHER_FIRST";
         TryRun(()=>_db.SaveSupportSettings(Current.AcademicYearId,Money(VoucherDefaultBox,"방과후 이용권 기본 한도"),Money(FreeDefaultBox,"자유수강권 기본 한도"),priority,VoucherGradesBox.Text),"학년도 지원금 정책을 저장했습니다. 기존 정산은 다시 생성해야 합니다.");
+    }
+
+    private void MoveDepartmentPriorityUp_Click(object sender,RoutedEventArgs e)=>MovePriorityItem(DepartmentPriorityList,_departmentPriorityItems,-1);
+    private void MoveDepartmentPriorityDown_Click(object sender,RoutedEventArgs e)=>MovePriorityItem(DepartmentPriorityList,_departmentPriorityItems,1);
+    private void MoveChargePriorityUp_Click(object sender,RoutedEventArgs e)=>MovePriorityItem(ChargePriorityList,_chargePriorityItems,-1);
+    private void MoveChargePriorityDown_Click(object sender,RoutedEventArgs e)=>MovePriorityItem(ChargePriorityList,_chargePriorityItems,1);
+
+    private void SaveVoucherPriorities_Click(object sender,RoutedEventArgs e)
+    {
+        if(Current is null)return;
+        var departments=_departmentPriorityItems.Select(x=>long.Parse(x.Key)).ToArray();
+        var chargeTypes=_chargePriorityItems.Select(x=>x.Key).ToArray();
+        TryRun(()=>_db.SaveVoucherAllocationPriorities(Current.AcademicYearId,departments,chargeTypes),
+            "방과후 이용권 차감 우선순위를 저장했습니다. 기존 정산은 다시 생성해야 합니다.");
+    }
+
+    private static void MovePriorityItem(ListBox list,ObservableCollection<PriorityItem> items,int offset)
+    {
+        if(list.SelectedItem is not PriorityItem selected){MessageBox.Show("순서를 변경할 항목을 선택하세요.");return;}
+        var oldIndex=items.IndexOf(selected);var newIndex=oldIndex+offset;
+        if(newIndex<0||newIndex>=items.Count)return;
+        items.Move(oldIndex,newIndex);UpdatePriorityOrders(items);list.SelectedItem=selected;list.ScrollIntoView(selected);
+    }
+
+    private static void ReplacePriorityItems(ObservableCollection<PriorityItem> target,IEnumerable<PriorityItem> source)
+    {
+        target.Clear();foreach(var item in source)target.Add(item);UpdatePriorityOrders(target);
+    }
+
+    private static void UpdatePriorityOrders(IEnumerable<PriorityItem> items)
+    {
+        var order=1;foreach(var item in items)item.Order=order++;
     }
 
     private void SaveBudgetOverride_Click(object sender,RoutedEventArgs e)

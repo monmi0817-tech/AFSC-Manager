@@ -23,7 +23,7 @@ public partial class App : Application
             if(File.Exists(AppPaths.DatabasePath)&&new FileInfo(AppPaths.DatabasePath).Length>0)
             {
                 var backup=new BackupService(AppPaths.DatabasePath);var version=backup.ValidateDatabase(AppPaths.DatabasePath);
-                if(version<4)backup.CreateBackup(Path.Combine(AppPaths.RecoveryDirectory,$"스키마업데이트전_v{version}_{DateTime.Now:yyyyMMdd_HHmmss}.afbackup"));
+                if(version<5)backup.CreateBackup(Path.Combine(AppPaths.RecoveryDirectory,$"스키마업데이트전_v{version}_{DateTime.Now:yyyyMMdd_HHmmss}.afbackup"));
             }
             database.Initialize();
             var window = new MainWindow();
