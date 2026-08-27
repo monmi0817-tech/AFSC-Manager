@@ -2,7 +2,7 @@
 
 전교생 정보부터 수강, 지원 자격, 정산, 부서별 품의까지 연결하기 위한 Windows 로컬 데스크톱 앱입니다.
 
-현재 구현 범위는 **MVP 7 / v1.1.1**입니다.
+현재 구현 범위는 **MVP 7 / v1.1.2**입니다.
 
 - 작업공간 생성·선택
 - 전교생 학생정보 직접 입력·수정·삭제·Excel 가져오기/양식 받기
@@ -24,6 +24,7 @@
 - 선행 작업공간 검증 및 동일 학년도 누적 사용액 계산
 - 일반 수익자·이용권 초과금·이용권·자유수강권 배분 결과
 - 강사료·수용비·교재비·재료비별 수익자·방과후 이용권·자유수강권 결과 화면
+- 수익자·방과후 이용권·자유수강권 탭별 학생 정산 결과 Excel 저장
 - 부서정보 수정 후 사용자가 실행하는 부서금액 다시 불러오기
 - 수기로 조정한 실제 적용금액을 보존하는 안전한 기본금액 갱신
 - 수강취소 상태·취소일·사유 보존
@@ -65,13 +66,13 @@ dotnet run --project .\src\AfterSchoolManager\AfterSchoolManager.csproj
 
 1. .NET 8 SDK와 Inno Setup 6을 설치합니다.
 2. `build-installer.ps1`을 실행합니다.
-3. `artifacts\installer\AfterSchoolIntegratedManager-Setup-v1.1.1.exe`를 배포합니다.
+3. `artifacts\installer\AfterSchoolIntegratedManager-Setup-v1.1.2.exe`를 배포합니다.
 
 설치파일은 앱만 `%LOCALAPPDATA%\Programs\AfterSchoolIntegratedManager`에 설치합니다. 업무 DB는 별도 경로에 유지되며 제거 프로그램에서도 삭제하지 않습니다.
 
 ## GitHub Release 업데이트 설정
 
-저장소에 `v1.1.1`처럼 `v`로 시작하는 태그를 푸시하면 `.github/workflows/release.yml`이 Windows 설치파일을 생성하여 Release에 첨부합니다. 앱은 사용자가 `업데이트 확인`을 눌렀을 때만 고정된 `monmi0817-tech/AFSC-Manager`의 Release 정보를 확인합니다. 화면에는 저장소 주소를 노출하지 않습니다.
+저장소에 `v1.1.2`처럼 `v`로 시작하는 태그를 푸시하면 `.github/workflows/release.yml`이 Windows 설치파일을 생성하여 Release에 첨부합니다. 앱은 사용자가 `업데이트 확인`을 눌렀을 때만 고정된 `monmi0817-tech/AFSC-Manager`의 Release 정보를 확인합니다. 화면에는 저장소 주소를 노출하지 않습니다.
 
 ## 데이터 저장 위치
 

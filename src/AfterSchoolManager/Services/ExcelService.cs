@@ -52,6 +52,75 @@ public sealed class ExcelService
         ws.PageSetup.PrintAreas.Add($"A1:F{totalRow}");wb.SaveAs(path);
     }
 
+    public void ExportSelfPayResults(string path,WorkspaceItem workspace,IReadOnlyList<SelfPayResultItem> rows,DateTime generatedAt)
+    {
+        ExportSettlementResults(path,workspace,"수익자","수익자",
+            new[]{"학년","반","번호","이름","강사료","수용비","교재비","재료비","합계"},
+            rows.Select(row=>new object[]{row.Grade,row.ClassName,row.StudentNumber,row.StudentName,row.InstructorFee,row.OperatingFee,row.TextbookFee,row.MaterialFee,row.Total}),generatedAt);
+    }
+
+    public void ExportVoucherResults(string path,WorkspaceItem workspace,IReadOnlyList<VoucherResultItem> rows,DateTime generatedAt)
+    {
+        ExportSettlementResults(path,workspace,"방과후 이용권","방과후이용권",
+            new[]{"학년","반","번호","이름","이용권 강사료","이용권 수용비","이용권 교재비","이용권 재료비","이용권 합계","초과 강사료","초과 수용비","초과 교재비","초과 재료비","초과 합계"},
+            rows.Select(row=>new object[]{row.Grade,row.ClassName,row.StudentNumber,row.StudentName,row.VoucherInstructorFee,row.VoucherOperatingFee,row.VoucherTextbookFee,row.VoucherMaterialFee,row.VoucherTotal,row.OverInstructorFee,row.OverOperatingFee,row.OverTextbookFee,row.OverMaterialFee,row.OverTotal}),generatedAt);
+    }
+
+    public void ExportFreeVoucherResults(string path,WorkspaceItem workspace,IReadOnlyList<FreeVoucherResultItem> rows,DateTime generatedAt)
+    {
+        ExportSettlementResults(path,workspace,"자유수강권","자유수강권",
+            new[]{"학년","반","번호","이름","강사료","수용비","교재비","재료비","합계"},
+            rows.Select(row=>new object[]{row.Grade,row.ClassName,row.StudentNumber,row.StudentName,row.InstructorFee,row.OperatingFee,row.TextbookFee,row.MaterialFee,row.Total}),generatedAt);
+    }
+
+    private static void ExportSettlementResults(string path,WorkspaceItem workspace,string title,string sheetName,
+        IReadOnlyList<string> headers,IEnumerable<object[]> sourceRows,DateTime generatedAt)
+    {
+        var rows=sourceRows.ToArray();
+        using var wb=new XLWorkbook();var ws=wb.Worksheets.Add(sheetName);
+        var lastColumn=headers.Count;
+        ws.Cell(1,1).Value=$"{workspace.AcademicYear}학년도 {workspace.Name} {title}";
+        ws.Range(1,1,1,lastColumn).Merge();ws.Cell(1,1).Style.Font.Bold=true;ws.Cell(1,1).Style.Font.FontSize=16;
+        ws.Cell(1,1).Style.Alignment.Horizontal=XLAlignmentHorizontalValues.Center;
+        ws.Cell(2,1).Value=$"작업공간: {workspace.Name}  |  기간: {workspace.StartDate:yyyy-MM-dd} ~ {workspace.EndDate:yyyy-MM-dd}  |  정산 생성: {generatedAt:yyyy-MM-dd HH:mm:ss}";
+        ws.Range(2,1,2,lastColumn).Merge();ws.Cell(2,1).Style.Font.FontColor=XLColor.FromHtml("#667085");
+        for(var col=0;col<headers.Count;col++)ws.Cell(4,col+1).Value=headers[col];
+        var rowNumber=5;
+        foreach(var values in rows)
+        {
+            for(var col=0;col<values.Length;col++)SetCellValue(ws.Cell(rowNumber,col+1),values[col]);
+            rowNumber++;
+        }
+        var totalRow=rowNumber;ws.Cell(totalRow,4).Value="합계";
+        for(var col=5;col<=lastColumn;col++)ws.Cell(totalRow,col).FormulaA1=rows.Length==0?"0":$"SUM({ws.Cell(5,col).Address}:{ws.Cell(totalRow-1,col).Address})";
+        var table=ws.Range(4,1,totalRow,lastColumn);
+        table.Style.Border.OutsideBorder=XLBorderStyleValues.Thin;table.Style.Border.InsideBorder=XLBorderStyleValues.Thin;
+        ws.Range(4,1,4,lastColumn).Style.Fill.BackgroundColor=XLColor.FromHtml("#217346");
+        ws.Range(4,1,4,lastColumn).Style.Font.FontColor=XLColor.White;ws.Range(4,1,4,lastColumn).Style.Font.Bold=true;
+        ws.Range(totalRow,1,totalRow,lastColumn).Style.Fill.BackgroundColor=XLColor.FromHtml("#E2F0D9");
+        ws.Range(totalRow,1,totalRow,lastColumn).Style.Font.Bold=true;
+        ws.Range(5,5,totalRow,lastColumn).Style.NumberFormat.Format="#,##0";
+        ws.Range(4,1,totalRow,lastColumn).Style.Alignment.Vertical=XLAlignmentVerticalValues.Center;
+        ws.Range(4,1,totalRow,4).Style.Alignment.Horizontal=XLAlignmentHorizontalValues.Center;
+        ws.Range(4,5,totalRow,lastColumn).Style.Alignment.Horizontal=XLAlignmentHorizontalValues.Right;
+        ws.Column(1).Width=8;ws.Column(2).Width=9;ws.Column(3).Width=9;ws.Column(4).Width=14;
+        for(var col=5;col<=lastColumn;col++)ws.Column(col).Width=16;
+        ws.Row(1).Height=28;ws.SheetView.FreezeRows(4);ws.Range(4,1,totalRow-1,lastColumn).SetAutoFilter();
+        ws.PageSetup.PageOrientation=XLPageOrientation.Landscape;ws.PageSetup.FitToPages(1,0);
+        ws.PageSetup.Margins.Top=0.4;ws.PageSetup.Margins.Bottom=0.4;ws.PageSetup.Margins.Left=0.4;ws.PageSetup.Margins.Right=0.4;
+        ws.PageSetup.PrintAreas.Add($"A1:{ws.Cell(totalRow,lastColumn).Address}");wb.SaveAs(path);
+    }
+
+    private static void SetCellValue(IXLCell cell,object value)
+    {
+        switch(value)
+        {
+            case int intValue:cell.Value=intValue;break;
+            case long longValue:cell.Value=longValue;break;
+            default:cell.Value=value.ToString()??"";break;
+        }
+    }
+
     private static void CreateTemplate(string path, string sheetName, params string[] headers)
     {
         using var wb = new XLWorkbook();

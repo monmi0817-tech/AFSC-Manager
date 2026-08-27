@@ -204,6 +204,52 @@ public partial class MainWindow : Window
         ProposalVoucherTotalText.Text=Won(items.Sum(x=>x.VoucherAmount));ProposalFreeTotalText.Text=Won(items.Sum(x=>x.FreeVoucherAmount));ProposalGrandTotalText.Text=Won(items.Sum(x=>x.TotalAmount));
     }
 
+    private void ExportSelfPay_Click(object sender,RoutedEventArgs e)
+    {
+        ExportSettlementResult("수익자", "수익자", _settlement.GetSelfPayResults,
+            (path,workspace,generatedAt,rows)=>_excel.ExportSelfPayResults(path,workspace,rows,generatedAt));
+    }
+
+    private void ExportVoucher_Click(object sender,RoutedEventArgs e)
+    {
+        ExportSettlementResult("방과후이용권", "방과후 이용권", _settlement.GetVoucherResults,
+            (path,workspace,generatedAt,rows)=>_excel.ExportVoucherResults(path,workspace,rows,generatedAt));
+    }
+
+    private void ExportFreeVoucher_Click(object sender,RoutedEventArgs e)
+    {
+        ExportSettlementResult("자유수강권", "자유수강권", _settlement.GetFreeVoucherResults,
+            (path,workspace,generatedAt,rows)=>_excel.ExportFreeVoucherResults(path,workspace,rows,generatedAt));
+    }
+
+    private void ExportSettlementResult<T>(string fileLabel,string displayName,Func<long,IReadOnlyList<T>> loader,
+        Action<string,WorkspaceItem,DateTime,IReadOnlyList<T>> exporter)
+    {
+        var workspace=Current;
+        if(workspace is null)return;
+        var status=_settlement.GetStatus(workspace.Id);
+        if(!status.IsCurrent||status.GeneratedAt is null)
+        {
+            MessageBox.Show("최신 정산 데이터를 생성한 후 Excel 파일을 받을 수 있습니다.","정산 필요",MessageBoxButton.OK,MessageBoxImage.Information);
+            return;
+        }
+        var rows=loader(workspace.Id);
+        if(rows.Count==0)
+        {
+            MessageBox.Show($"현재 작업공간에 저장할 {displayName} 데이터가 없습니다.","데이터 없음",MessageBoxButton.OK,MessageBoxImage.Information);
+            return;
+        }
+        var safeWorkspace=string.Concat(workspace.Name.Select(ch=>Path.GetInvalidFileNameChars().Contains(ch)?'_':ch));
+        var dialog=new SaveFileDialog
+        {
+            FileName=$"{workspace.AcademicYear}학년도_{safeWorkspace}_{fileLabel}.xlsx",
+            Filter="Excel 통합 문서 (*.xlsx)|*.xlsx",
+            AddExtension=true
+        };
+        if(dialog.ShowDialog()!=true)return;
+        TryRun(()=>exporter(dialog.FileName,workspace,status.GeneratedAt.Value,rows),$"{displayName} Excel 파일을 저장했습니다.",false);
+    }
+
     private void ProposalFeeTypeCombo_SelectionChanged(object sender,SelectionChangedEventArgs e)
     {if(_ready)RefreshProposal();}
 

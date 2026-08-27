@@ -41,6 +41,20 @@
 </Trigger>
 </Style.Triggers>
 </Style>
+  <Style x:Key="ExcelExport" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+<Setter Property="Background" Value="#217346"/>
+<Setter Property="Foreground" Value="White"/>
+<Setter Property="BorderBrush" Value="#217346"/>
+<Setter Property="Padding" Value="17,9"/>
+<Setter Property="MinHeight" Value="40"/>
+<Setter Property="FontWeight" Value="SemiBold"/>
+<Style.Triggers>
+<Trigger Property="IsMouseOver" Value="True">
+<Setter Property="Background" Value="#185C37"/>
+<Setter Property="BorderBrush" Value="#185C37"/>
+</Trigger>
+</Style.Triggers>
+</Style>
   <Style x:Key="HiddenTab" TargetType="TabItem">
 <Setter Property="Height" Value="0"/>
 <Setter Property="Width" Value="0"/>
@@ -577,10 +591,17 @@
 <RowDefinition Height="Auto"/>
 <RowDefinition/>
 </Grid.RowDefinitions>
+<Grid>
+<Grid.ColumnDefinitions>
+<ColumnDefinition/>
+<ColumnDefinition Width="Auto"/>
+</Grid.ColumnDefinitions>
 <StackPanel>
 <TextBlock Text="정산 결과" Foreground="#4B67D1" FontWeight="Bold"/>
 <TextBlock Text="수익자" FontSize="28" FontWeight="SemiBold"/>
 </StackPanel>
+<Button Grid.Column="1" Content="⇩  Excel 파일 받기" Click="ExportSelfPay_Click" Style="{StaticResource ExcelExport}" VerticalAlignment="Center"/>
+</Grid>
 <UniformGrid Grid.Row="1" Columns="5" Margin="0,18,0,12">
 <Border Style="{StaticResource Card}">
 <StackPanel>
@@ -638,10 +659,17 @@
 <RowDefinition Height="Auto"/>
 <RowDefinition/>
 </Grid.RowDefinitions>
+<Grid>
+<Grid.ColumnDefinitions>
+<ColumnDefinition/>
+<ColumnDefinition Width="Auto"/>
+</Grid.ColumnDefinitions>
 <StackPanel>
 <TextBlock Text="정산 결과" Foreground="#4B67D1" FontWeight="Bold"/>
 <TextBlock Text="방과후 이용권" FontSize="28" FontWeight="SemiBold"/>
 </StackPanel>
+<Button Grid.Column="1" Content="⇩  Excel 파일 받기" Click="ExportVoucher_Click" Style="{StaticResource ExcelExport}" VerticalAlignment="Center"/>
+</Grid>
 <UniformGrid Grid.Row="1" Columns="3" Margin="0,18,0,12">
 <Border Style="{StaticResource Card}">
 <StackPanel>
@@ -692,10 +720,17 @@
 <RowDefinition Height="Auto"/>
 <RowDefinition/>
 </Grid.RowDefinitions>
+<Grid>
+<Grid.ColumnDefinitions>
+<ColumnDefinition/>
+<ColumnDefinition Width="Auto"/>
+</Grid.ColumnDefinitions>
 <StackPanel>
 <TextBlock Text="정산 결과" Foreground="#4B67D1" FontWeight="Bold"/>
 <TextBlock Text="자유수강권" FontSize="28" FontWeight="SemiBold"/>
 </StackPanel>
+<Button Grid.Column="1" Content="⇩  Excel 파일 받기" Click="ExportFreeVoucher_Click" Style="{StaticResource ExcelExport}" VerticalAlignment="Center"/>
+</Grid>
 <UniformGrid Grid.Row="1" Columns="1" Margin="0,18,0,12">
 <Border Style="{StaticResource Card}">
 <StackPanel>
